@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports: ["3000:3000"]
+    env_file: [.env.local]
+    depends_on: [postgres]
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: medibook
+      POSTGRES_USER: medibook
+      POSTGRES_PASSWORD: change-me
+    volumes: ["medibook-data:/var/lib/postgresql/data"]
+volumes: { medibook-data: {} }

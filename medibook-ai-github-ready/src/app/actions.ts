@@ -1,0 +1,10 @@
+"use server";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { login, logout, requireUser } from "@/lib/auth";
+import { addAudit, updateStore } from "@/lib/store";
+
+export async function loginAction(_: {error?:string}|undefined, form:FormData){const parsed=z.object({email:z.string().email(),password:z.string().min(8),remember:z.string().optional()}).safeParse(Object.fromEntries(form));if(!parsed.success)return {error:"Enter a valid email and password."};const result=await login(parsed.data.email,parsed.data.password,Boolean(parsed.data.remember));if(!result.ok)return {error:result.error};redirect("/overview");}
+export async function logoutAction(){await logout();redirect("/login");}
+export async function createPatientAction(form:FormData){const user=await requireUser(["Administrator","Receptionist"]);const input=z.object({name:z.string().min(2),email:z.string().email(),phone:z.string().min(7),gender:z.string().optional()}).parse(Object.fromEntries(form));await updateStore(d=>{if(d.patients.some(p=>p.email===input.email))throw new Error("Patient email already exists");const id=crypto.randomUUID();d.patients.unshift({id,name:input.name,email:input.email,phone:input.phone,gender:input.gender,createdAt:new Date().toISOString()});addAudit(d,{userId:user.id,role:user.role,action:"PATIENT_REGISTERED",resource:"Patient",resourceId:id,result:"SUCCESS"});});redirect("/patients?created=1");}
+export async function saveSettingsAction(form:FormData){const user=await requireUser(["Administrator"]);const input=z.object({clinicName:z.string().min(2),timezone:z.string().min(3),openingTime:z.string(),closingTime:z.string(),duration:z.coerce.number().min(10).max(180),buffer:z.coerce.number().min(0).max(60),cancellationPolicy:z.string().min(10),aiEnabled:z.string().optional(),notifications:z.string().optional()}).parse(Object.fromEntries(form));await updateStore(d=>{d.settings={...d.settings,...input,aiEnabled:Boolean(input.aiEnabled),notifications:Boolean(input.notifications)};addAudit(d,{userId:user.id,role:user.role,action:"SETTINGS_UPDATED",resource:"ApplicationSetting",result:"SUCCESS"})});redirect("/settings?saved=1")}

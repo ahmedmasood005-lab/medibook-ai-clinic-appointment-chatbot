@@ -1,0 +1,1 @@
+import {requireUser} from "@/lib/auth";import {readStore} from "@/lib/store";import {Assistant} from "@/components/assistant";export default async function AssistantPage(){const [u,d]=await Promise.all([requireUser(),readStore()]);return <Assistant initial={d.conversations.filter(c=>c.userId===u.id)}/>}
